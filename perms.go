@@ -5,11 +5,12 @@
 package perms
 
 import (
-	"http"
-	"io/ioutil"
-	"bytes"
+	"os"
 	"fmt"
 	"sort"
+	"http"
+	"bytes"
+	"io/ioutil"
 	// Local imports
 	"github.com/crazy2be/session"
 )
@@ -47,14 +48,18 @@ func (this PermissionsList) Swap(i, j int) {
 
 // DEPRECATED! Exists only for compatibility reasons. Can be removed when modules are changed to use the new function.
 func GetPerms(r *http.Request) (p *Permissions) {
-	return Get(r)
+	p, err := Get(r)
+	if err != nil {
+		return nil
+	}
+	return p
 }
 
 // Basic function that retrieves the permissions a user has based on the contents of their request, including cookies and request path. Designed to be a simple function for most uses. If you want more control, you can use the GetGroupPerms and GetUserPerms functions.
-func Get(r *http.Request)  (p *Permissions) {
+func Get(r *http.Request)  (p *Permissions, err os.Error) {
 	p = new(Permissions)
-	s, e := session.GetExisting(r)
-	if e != nil {
+	s, err := session.GetExisting(r)
+	if err != nil {
 		p.Authenticated = false
 		return
 	}
@@ -62,7 +67,10 @@ func Get(r *http.Request)  (p *Permissions) {
 	// Current authentication is based on e-mail. Might change this?
 	uname := s.Get("openid-email")
 	fmt.Println("Getting permissions for", uname)
-	uperms := GetUserPerms(uname, r.URL.Path)
+	uperms, err := GetUserPerms(uname, r.URL.Path)
+	if err != nil {
+		return nil, err
+	}
 	if uperms == nil {
 		p.Recognized = false
 		return
@@ -70,9 +78,15 @@ func Get(r *http.Request)  (p *Permissions) {
 	p.Write = uperms.Write
 	p.Read = uperms.Read
 	fmt.Println("Grabbed permissions for user")
-	groups := loadGroups(uname)
+	groups, err := loadGroups(uname)
+	if err != nil {
+		return nil, err
+	}
 	for _, group := range(groups) {
-		gperms := GetGroupPerms(group, r.URL.Path)
+		gperms, err := GetGroupPerms(group, r.URL.Path)
+		if err != nil {
+			return nil, err
+		}
 		if gperms == nil {
 			continue
 		}
@@ -92,8 +106,11 @@ func Get(r *http.Request)  (p *Permissions) {
 }
 
 // Retrieves the permissions for all members of a group with the given name.
-func GetGroupPerms(name, path string) (p *Permissions) {
-	mperms := loadPerms("data/shared/groups/"+name+"/perms")
+func GetGroupPerms(name, path string) (p *Permissions, err os.Error) {
+	mperms, err := loadPerms("data/shared/groups/"+name+"/perms")
+	if err != nil {
+		return nil, err
+	}
 	fmt.Println("Permissions for group", name, ":", mperms)
 	p = matchPerms(mperms, path)
 	fmt.Println("Matched permissions for group", name, ":", p)
@@ -101,9 +118,12 @@ func GetGroupPerms(name, path string) (p *Permissions) {
 }
 
 // Retrieves the user permissions, and the user permissions ONLY, for a user with a given name. Does not take group membership into account, and is likely not that useful for this reason.
-func GetUserPerms(name, path string) (p *Permissions) {
-	mperms := loadPerms("data/shared/users/"+name+"/perms")
-	fmt.Println("Permissions for user", name, ":", mperms)
+func GetUserPerms(name, path string) (p *Permissions, err os.Error) {
+	mperms, err := loadPerms("data/shared/users/"+name+"/perms")
+	if err != nil {
+		return nil, err
+	}
+	//fmt.Println("Permissions for user", name, ":", mperms)
 	p = matchPerms(mperms, path)
 	fmt.Println("Matched permissions for user", name, ":", p)
 	return
@@ -122,11 +142,11 @@ func matchPerms(mperms PermissionsList, path string) (p *Permissions) {
 	return
 }
 
-func loadGroups(name string) (gr []string) {
+func loadGroups(name string) (gr []string, err os.Error) {
 	path := "data/shared/users/"+name+"/groups"
-	file, e := ioutil.ReadFile(path)
-	if e != nil {
-		fmt.Println("Could not get group list for", name, ":", e)
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, os.NewError(fmt.Sprintln("Could not get group list for", name, ":", err))
 	}
 	lines := bytes.Split(file, []byte{'\n'}, -1)
 	gr = make([]string, len(lines))
@@ -137,11 +157,10 @@ func loadGroups(name string) (gr []string) {
 	return
 }
 
-func loadPerms(path string) (mperms PermissionsList) {
-	file, e := ioutil.ReadFile(path)
-	if e != nil {
-		fmt.Println("Could not get group permissions for", path, ":", e)
-		return
+func loadPerms(path string) (mperms PermissionsList, err os.Error) {
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, os.NewError(fmt.Sprintln("Could not get group permissions for", path, ":", err))
 	}
 	lines := bytes.Split(file, []byte("\n"), -1)
 	mperms = make(PermissionsList, len(lines))
