@@ -42,7 +42,7 @@ Functions
 
 TODO: Do we want more permissions here?
 
-## func Get(r *http.Request) (p *Permissions, err os.Error)
+### func Get(r *http.Request) (p *Permissions, err os.Error)
 Basic function that retrieves the permissions a user has based on the contents of their request, including cookies and request path. Designed to be a simple function for most uses. If you want more control, you can use the GetGroupPerms and GetUserPerms functions.
 
 ### func GetGroupPerms(name, path string) (p *Permissions, err os.Error)
