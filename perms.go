@@ -17,7 +17,7 @@ import (
 
 // TODO: Do we want more permissions here?
 type Permissions struct {
-	Read bool
+	Read  bool
 	Write bool
 	// Is the user authenticated at all? Aka 1) do they have a session cookie, and 2) have they logged in?
 	Authenticated bool
@@ -28,15 +28,15 @@ type Permissions struct {
 }
 
 type User struct {
-	Email string
+	Email  string
 	Groups []string
-	Perms []string
+	Perms  []string
 }
 
 // Allows sorting the list of paths for matching.
 type PermissionsList []Permissions
 
-func (this PermissionsList) Len() int { 
+func (this PermissionsList) Len() int {
 	return len(this)
 }
 func (this PermissionsList) Less(i, j int) bool {
@@ -56,7 +56,7 @@ func GetPerms(r *http.Request) (p *Permissions) {
 }
 
 // Basic function that retrieves the permissions a user has based on the contents of their request, including cookies and request path. Designed to be a simple function for most uses. If you want more control, you can use the GetGroupPerms and GetUserPerms functions.
-func Get(r *http.Request)  (p *Permissions, err os.Error) {
+func Get(r *http.Request) (p *Permissions, err os.Error) {
 	p = new(Permissions)
 	s, err := session.GetExisting(r)
 	if err != nil {
@@ -82,7 +82,7 @@ func Get(r *http.Request)  (p *Permissions, err os.Error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, group := range(groups) {
+	for _, group := range groups {
 		gperms, err := GetGroupPerms(group, r.URL.Path)
 		if err != nil {
 			return nil, err
@@ -107,7 +107,7 @@ func Get(r *http.Request)  (p *Permissions, err os.Error) {
 
 // Retrieves the permissions for all members of a group with the given name.
 func GetGroupPerms(name, path string) (p *Permissions, err os.Error) {
-	mperms, err := loadPerms("data/shared/groups/"+name+"/perms")
+	mperms, err := loadPerms("data/shared/groups/" + name + "/perms")
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func GetGroupPerms(name, path string) (p *Permissions, err os.Error) {
 
 // Retrieves the user permissions, and the user permissions ONLY, for a user with a given name. Does not take group membership into account, and is likely not that useful for this reason.
 func GetUserPerms(name, path string) (p *Permissions, err os.Error) {
-	mperms, err := loadPerms("data/shared/users/"+name+"/perms")
+	mperms, err := loadPerms("data/shared/users/" + name + "/perms")
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func GetUserPerms(name, path string) (p *Permissions, err os.Error) {
 
 // Takes a list of permissions, likely garnered from a file, and returns the first found match. You should use sort.Sort to sort the list longest to shortest first, as this would allow the patterns to work as one would expect (more specific patterns override less specific ones, even if they have less permissions than than the more general ones).
 func matchPerms(mperms PermissionsList, path string) (p *Permissions) {
-	for _, mperm := range(mperms) {
+	for _, mperm := range mperms {
 		if pathMatch(mperm.Path, path) {
 			// TODO: Caching
 			fmt.Println("Found match for path", path, ":", mperm.Path)
@@ -143,7 +143,7 @@ func matchPerms(mperms PermissionsList, path string) (p *Permissions) {
 }
 
 func loadGroups(name string) (gr []string, err os.Error) {
-	path := "data/shared/users/"+name+"/groups"
+	path := "data/shared/users/" + name + "/groups"
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, os.NewError(fmt.Sprintln("Could not get group list for", name, ":", err))
@@ -151,7 +151,7 @@ func loadGroups(name string) (gr []string, err os.Error) {
 	lines := bytes.Split(file, []byte{'\n'}, -1)
 	gr = make([]string, len(lines))
 	// Is this necessary? It's somewhat inefficient...
-	for i, line := range(lines) {
+	for i, line := range lines {
 		gr[i] = string(line)
 	}
 	return
@@ -164,17 +164,17 @@ func loadPerms(path string) (mperms PermissionsList, err os.Error) {
 	}
 	lines := bytes.Split(file, []byte("\n"), -1)
 	mperms = make(PermissionsList, len(lines))
-	for i, line := range(lines) {
+	for i, line := range lines {
 		parts := bytes.Split(line, []byte(" "), 2)
 		perms := mperms[i]
-		for _, perm := range(parts[0]) {
-			switch (perm) {
-				case 'r':
-					perms.Read = true
-				case 'w':
-					perms.Write = true
-				default:
-					fmt.Println("WARNING: Unrecognized permission", perm)
+		for _, perm := range parts[0] {
+			switch perm {
+			case 'r':
+				perms.Read = true
+			case 'w':
+				perms.Write = true
+			default:
+				fmt.Println("WARNING: Unrecognized permission", perm)
 			}
 			perms.Path = string(parts[1])
 			mperms[i] = perms
