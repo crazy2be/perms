@@ -148,7 +148,7 @@ func loadGroups(name string) (gr []string, err os.Error) {
 	if err != nil {
 		return nil, os.NewError(fmt.Sprintln("Could not get group list for", name, ":", err))
 	}
-	lines := bytes.Split(file, []byte{'\n'}, -1)
+	lines := bytes.Split(file, []byte{'\n'})
 	gr = make([]string, len(lines))
 	// Is this necessary? It's somewhat inefficient...
 	for i, line := range lines {
@@ -162,10 +162,10 @@ func loadPerms(path string) (mperms PermissionsList, err os.Error) {
 	if err != nil {
 		return nil, os.NewError(fmt.Sprintln("Could not get group permissions for", path, ":", err))
 	}
-	lines := bytes.Split(file, []byte("\n"), -1)
+	lines := bytes.Split(file, []byte("\n"))
 	mperms = make(PermissionsList, len(lines))
 	for i, line := range lines {
-		parts := bytes.Split(line, []byte(" "), 2)
+		parts := bytes.SplitN(line, []byte(" "), 2)
 		perms := mperms[i]
 		for _, perm := range parts[0] {
 			switch perm {
